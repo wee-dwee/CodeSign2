@@ -1,0 +1,175 @@
+name: Build, Sign, and Verify ModbusTCPMaster
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  DOTNET_VERSION: '8.0.x'  # Set your required .NET version here
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # ✅ Step 1: Checkout Code
+    - name: 'Checkout Code'
+      uses: actions/checkout@v4
+
+    # ✅ Step 2: Setup .NET Environment
+    - name: 'Setup .NET Environment'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    # ✅ Step 3: Build Project1
+    - name: 'Build Project1'
+      run: |
+        echo "⚙️ Building Project1..."
+        dotnet build Project1/Project1.csproj --configuration Release
+        echo "✅ Build Completed Successfully"
+
+    # ✅ Step 4: Create ModbusTCPMaster.zip from Project1 Build
+    - name: 'Create ModbusTCPMaster.zip'
+      run: |
+        echo "📦 Creating ModbusTCPMaster.zip..."
+        mkdir -p ModbusTCPMaster
+        cp -r Project1/bin/Release/net8.0/* ModbusTCPMaster/
+        zip -r ModbusTCPMaster.zip ModbusTCPMaster
+        echo "✅ ModbusTCPMaster.zip created successfully"
+
+    # ✅ Step 5: Import GPG Private Key
+    - name: 'Import GPG Private Key'
+      run: |
+        echo "🔐 Importing GPG Private Key..."
+        echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --import
+        gpg --list-secret-keys --keyid-format LONG
+        echo "✅ GPG Key Imported Successfully"
+      env:
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+
+    # ✅ Step 6: Set GPG Key Trust
+    - name: 'Set GPG Key Trust'
+      run: |
+        gpg --import-ownertrust <<< "52734E8E778377946DDD0AA0576058DD4A6CC331:6"
+
+    # ✅ Step 7: Sign ModbusTCPMaster.zip
+    - name: 'Sign ModbusTCPMaster.zip'
+      run: |
+        echo "🔏 Signing ModbusTCPMaster.zip..."
+        gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" \
+        --detach-sign --armor -u $GPG_KEY_ID -o ModbusTCPMaster.zip.sig ModbusTCPMaster.zip
+        echo "✅ ModbusTCPMaster.zip signed successfully"
+
+    # ✅ Step 8: Verify Signed ModbusTCPMaster.zip
+    - name: 'Verify Signed ModbusTCPMaster.zip'
+      run: |
+        echo "🔍 Verifying ModbusTCPMaster.zip signature..."
+        gpg --verify ModbusTCPMaster.zip.sig ModbusTCPMaster.zip
+        echo "✅ Verification Complete"
+
+    # ✅ Step 9: Create output.zip with ModbusTCPMaster.zip and Signature
+    - name: 'Create output.zip with Signed Artifacts'
+      run: |
+        echo "📦 Creating output.zip with signed artifacts..."
+        zip -r output.zip ModbusTCPMaster.zip ModbusTCPMaster.zip.sig
+        echo "✅ output.zip created successfully"
+
+    # ✅ Step 10: Upload output.zip as Artifact
+    - name: 'Upload output.zip as Artifact'
+      uses: actions/upload-artifact@v4
+      with:
+        name: signed-artifacts
+        path: output.zip
+
+    # ✅ Step 11: Modify and Re-zip ModbusTCPMaster.zip
+    - name: 'Modify package_config.json in ModbusTCPMaster.zip'
+      run: |
+        echo "📂 Unzipping output.zip for modification..."
+        unzip -o output.zip -d temp_dir
+        unzip -o temp_dir/ModbusTCPMaster.zip -d temp_dir/ModbusTCPMaster
+
+        # Modify package_config.json
+        PACKAGE_CONFIG="temp_dir/ModbusTCPMaster/package_config.json"
+        if [ -f "$PACKAGE_CONFIG" ]; then
+          jq '.version += 1' "$PACKAGE_CONFIG" > temp_dir/ModbusTCPMaster/package_config_updated.json
+          mv temp_dir/ModbusTCPMaster/package_config_updated.json "$PACKAGE_CONFIG"
+          echo "✅ package_config.json modified successfully"
+        else
+          echo "❌ Error: package_config.json not found!"
+          exit 1
+        fi
+
+        # Re-zip ModbusTCPMaster.zip
+        cd temp_dir/ModbusTCPMaster
+        zip -r ModbusTCPMaster.zip .
+        mv ModbusTCPMaster.zip ../
+        cd ../..
+
+        # Replace modified ModbusTCPMaster.zip in output.zip
+        cd temp_dir
+        zip -r ../output.zip *
+        cd ..
+        echo "✅ output.zip updated successfully"
+
+    # ✅ Step 12: Upload Updated output.zip as Artifact
+    - name: 'Upload Updated output.zip as Artifact'
+      uses: actions/upload-artifact@v4
+      with:
+        name: updated-artifacts
+        path: output.zip
+
+    # ✅ Step 13: Build C++ Verifier
+    - name: 'Build C++ Verifier'
+      run: |
+        echo "⚙️ Building C++ Verifier..."
+        g++ -o GPGVerifier GPGVerifier.cpp
+        echo "✅ C++ Build Completed Successfully"
+
+    # ✅ Step 14: Unzip Updated output.zip for Verification
+    - name: 'Unzip Updated output.zip for Verification'
+      run: |
+        echo "📂 Unzipping updated output.zip for verification..."
+        unzip -o output.zip -d verification_dir
+        echo "✅ Unzip Complete"
+
+    # ✅ Step 15: Run C++ Verification on Extracted Files
+    - name: 'Run C++ Verification'
+      run: |
+        echo "🔍 Running C++ Verification on Extracted Files..."
+        ./GPGVerifier > verification_output.txt
+        echo "✅ C++ Verification Completed"
+
+    # ✅ Step 16: Upload Verification Results as Artifact
+    - name: 'Upload Verification Results'
+      uses: actions/upload-artifact@v4
+      with:
+        name: verification-results
+        path: verification_output.txt
+
+    # ✅ Step 17: Create Final ZIP with All Artifacts
+    - name: 'Create final_artifacts.zip'
+      run: |
+        echo "📦 Creating final_artifacts.zip with all artifacts..."
+        mkdir final_artifacts
+        cp output.zip final_artifacts/
+        cp verification_output.txt final_artifacts/
+        cd final_artifacts
+        zip -r ../final_artifacts.zip *
+        cd ..
+        echo "✅ final_artifacts.zip created successfully"
+
+    # ✅ Step 18: Upload final_artifacts.zip
+    - name: 'Upload final_artifacts.zip'
+      uses: actions/upload-artifact@v4
+      with:
+        name: final-artifacts
+        path: final_artifacts.zip
+
+    # ✅ Step 19: Clean Up Intermediate Files
+    - name: 'Clean Up Intermediate Files'
+      run: |
+        echo "🧹 Cleaning up intermediate files..."
+        rm -rf output.zip verification_output.txt final_artifacts temp_dir
+        echo "✅ Cleanup complete"
