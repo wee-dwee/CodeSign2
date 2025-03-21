@@ -107,10 +107,10 @@ class GPGSigner
     {
         Console.Write("Enter file path to sign: ");
         string? filePath = Console.ReadLine()?.Trim();
-
+        Console.WriteLine(filePath);
         Console.Write("Enter GPG Key ID: ");
         string? keyID = "576058DD4A6CC331";
-
+        Console.WriteLine(keyID);
         if (string.IsNullOrWhiteSpace(filePath) || string.IsNullOrWhiteSpace(keyID))
         {
             Console.WriteLine("❌ Error: File path or Key ID cannot be empty.");
