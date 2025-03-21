@@ -103,7 +103,7 @@ class GPGSigner
         }
     }
 
-    static void Main()
+    static void Main(string[] args)
     {
    // Check if arguments are passed correctly
         if (args.Length < 2)
