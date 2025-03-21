@@ -105,10 +105,16 @@ class GPGSigner
 
     static void Main()
     {
-        Console.Write("Enter file path to sign: ");
-        string? filePath = Console.ReadLine()?.Trim();
-        Console.WriteLine(filePath);
-        Console.Write("Enter GPG Key ID: ");
+   // Check if arguments are passed correctly
+        if (args.Length < 2)
+        {
+            Console.WriteLine("❌ Error: File path or Key ID not provided.");
+            Console.WriteLine("Usage: dotnet run --project Project2/Project2.csproj <file_path> <gpg_key_id>");
+            return;
+        }
+
+        string filePath = args[0];  // First argument is the file path
+
         string? keyID = "576058DD4A6CC331";
         Console.WriteLine(keyID);
         if (string.IsNullOrWhiteSpace(filePath) || string.IsNullOrWhiteSpace(keyID))
