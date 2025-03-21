@@ -15,6 +15,8 @@ class GPGSigner
         {
             Process process = new Process();
             process.StartInfo.FileName = "gpg";
+            process.StartInfo.ArgumentList.Add("--pinentry-mode");
+            process.StartInfo.ArgumentList.Add("loopback"); // ✅ Add this line
             process.StartInfo.ArgumentList.Add("-u");
             process.StartInfo.ArgumentList.Add(keyID);
             process.StartInfo.ArgumentList.Add("--detach-sign");
@@ -50,6 +52,7 @@ class GPGSigner
             Console.WriteLine($"❌ Exception occurred: {ex.Message}");
         }
     }
+
 
     static void ExportPublicKey(string keyID)
     {
