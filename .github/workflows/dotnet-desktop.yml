@@ -54,6 +54,13 @@ jobs:
       run: |
         gpg --import-ownertrust <<< "52734E8E778377946DDD0AA0576058DD4A6CC331:6"
 
+  # ✅ Step 6: Build C# GPGSigner Project
+    - name: 'Build GPGSigner Program'
+      run: |
+        echo "⚙️ Building GPGSigner Program..."
+        dotnet build  Project2/Project2.csproj --configuration Release
+        echo "✅ Build Completed Successfully"
+        
     # ✅ Step 7: Sign ModbusTCPMaster.zip
     - name: 'Sign ModbusTCPMaster.zip'
       run: |
