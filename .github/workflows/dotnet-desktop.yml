@@ -65,7 +65,7 @@ jobs:
     - name: 'Sign ModbusTCPMaster.zip'
       run: |
         echo "🔏 Signing ModbusTCPMaster.zip..."
-        dotnet run Project2/Project2.csproj $GPG_KEY_ID -o ModbusTCPMaster.zip
+        dotnet run --project Project2/Project2.csproj ModbusTCPMaster.zip $GPG_KEY_ID
         echo "✅ ModbusTCPMaster.zip signed successfully"
 
      # ✅ Step 8: Verify that output.zip Exists
