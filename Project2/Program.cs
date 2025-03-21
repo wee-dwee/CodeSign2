@@ -106,7 +106,7 @@ class GPGSigner
     static void Main(string[] args)
     {
    // Check if arguments are passed correctly
-        if (args.Length < 2)
+        if (args.Length < 1)
         {
             Console.WriteLine("❌ Error: File path or Key ID not provided.");
             Console.WriteLine("Usage: dotnet run --project Project2/Project2.csproj <file_path> <gpg_key_id>");
