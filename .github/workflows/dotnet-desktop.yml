@@ -60,8 +60,19 @@ jobs:
         echo "🔏 Signing ModbusTCPMaster.zip..."
         gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" \
         --detach-sign --armor -u $GPG_KEY_ID -o ModbusTCPMaster.zip.sig ModbusTCPMaster.zip
+        dotnet run Project2/Project2.csproj $GPG_KEY_ID -o ModbusTCPMaster.zip
         echo "✅ ModbusTCPMaster.zip signed successfully"
 
+     # ✅ Step 8: Verify that output.zip Exists
+    - name: 'Verify output.zip Existence'
+      run: |
+        if [ -f "output.zip" ]; then
+          echo "✅ output.zip created successfully"
+        else
+          echo "❌ Error: output.zip not found!"
+          exit 1
+        fi
+        
     # ✅ Step 8: Verify Signed ModbusTCPMaster.zip
     - name: 'Verify Signed ModbusTCPMaster.zip'
       run: |
