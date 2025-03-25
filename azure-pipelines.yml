@@ -58,7 +58,7 @@ stages:
                 
                 # ✅ Prepare file paths
                 $filePath = "$(System.DefaultWorkingDirectory)/code_to_sign.zip"
-                $privateKeyPath = "$(System.DefaultWorkingDirectory)/private_key.asc"
+                $privateKeyPath = "$(System.DefaultWorkingDirectory)/private-key.asc"
                 $passphrase = "dwee1234@@"  # Replace with your secure passphrase
           
                 # ✅ Create Form Data for Multipart Request
