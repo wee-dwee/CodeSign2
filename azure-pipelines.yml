@@ -49,7 +49,22 @@ stages:
               }
               EOF
               )
-              echo $SIGN_RESPONSE | jq '.'  # Print Response
+              
+              # Debug: Print raw response
+              echo "🔎 Raw Response from Azure Function: $SIGN_RESPONSE"
+              
+              # Check for empty or invalid response
+              if [ -z "$SIGN_RESPONSE" ]; then
+                echo "❌ Empty response from Azure Function. Exiting."
+                exit 1
+              fi
+              
+              # Check if the response contains 'signedFile'
+              SIGN_STATUS=$(echo $SIGN_RESPONSE | jq -r '.status')
+              if [ "$SIGN_STATUS" != "success" ]; then
+                echo "❌ Signing failed. Status: $SIGN_STATUS"
+                exit 1
+              fi
               
               # Save signed file to signed_code.zip
               echo $SIGN_RESPONSE | jq -r '.signedFile' | base64 -d > signed_code.zip
@@ -76,7 +91,15 @@ stages:
               }
               EOF
               )
-              echo $VERIFY_RESPONSE | jq '.'  # Print Response
+              
+              # Debug: Print raw response
+              echo "🔎 Raw Response from Azure Function: $VERIFY_RESPONSE"
+              
+              # Check for empty or invalid response
+              if [ -z "$VERIFY_RESPONSE" ]; then
+                echo "❌ Empty response from Azure Function. Exiting."
+                exit 1
+              fi
               
               # Check verification result
               VERIFIED=$(echo $VERIFY_RESPONSE | jq -r '.verificationStatus')
