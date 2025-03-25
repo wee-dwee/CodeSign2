@@ -112,13 +112,17 @@ stages:
                 $headers = @{
                     "Content-Type" = "application/octet-stream"  # Use this for raw binary zip
                 }
+                  
+                $form = @{
+                  file = Get-Item -Path $signedCodePath
+                }
                 
                 # ✅ Send Raw Binary Data Using Invoke-RestMethod
                 try {
                     Write-Output "🔎 Invoking Azure Function to Verify with Raw Binary Data..."
                     
                     # 🚀 Sending raw binary zip using -InFile
-                    $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -InFile $signedCodePath
+                    $response = Invoke-RestMethod -Uri $url -Method Post -Form $form
                     
                     # ✅ Check if Verification was Successful
                     Write-Output "🔎 Verification Response: $response"
