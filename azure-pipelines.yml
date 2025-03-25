@@ -64,7 +64,7 @@ stages:
                 # ✅ Create Form Data for Multipart Request
                 $formData = @(
                   @{name="file"; filename=$(Split-Path -Leaf $filePath); content=[System.IO.File]::ReadAllBytes($filePath) },
-                  @{name="privateKeyFile"; filename=$(Split-Path -Leaf $privateKeyPath); content=[System.IO.File]::ReadAllBytes($privateKeyPath) },
+                  @{name="privateKeyFile"; filename=$(Split-Path -Leaf $filePath); content=[System.IO.File]::ReadAllBytes($privateKeyPath) },
                   @{name="passphrase"; content=$passphrase }
                 )
           
