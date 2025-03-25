@@ -93,44 +93,49 @@ stages:
             displayName: "Publish Signed Artifact"
 
           # ✅ Step 6: Invoke Azure Function for Verification
-          # ✅ Define API URL and File Path
-          $url = "$(VERIFY_FUNCTION_URL)"
-          $signedCodePath = "$(System.DefaultWorkingDirectory)/output.zip"
-          
-          # ✅ Check if File Exists
-          if (-Not (Test-Path $signedCodePath)) {
-              Write-Error "❌ Signed file not found: $signedCodePath"
-              exit 1
-          }
-          
-          # ✅ Prepare HTTP Headers for API Call
-          $headers = @{
-              "Content-Type" = "application/octet-stream"  # Use this for raw binary zip
-          }
-          
-          # ✅ Send Raw Binary Data Using Invoke-RestMethod
-          try {
-              Write-Output "🔎 Invoking Azure Function to Verify with Raw Binary Data..."
-              
-              # 🚀 Sending raw binary zip using -InFile
-              $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -InFile $signedCodePath
-              
-              # ✅ Check if Verification was Successful
-              Write-Output "🔎 Verification Response: $response"
-              
-              if ($response -match "Signature verified successfully") {
-                  Write-Output "✅ Verification successful. File is authentic."
-              }
-              else {
-                  Write-Error "❌ Verification failed! Possible tampering detected."
-                  exit 1
-              }
-          }
-          catch {
-              # ✅ Capture Detailed Error Information
-              Write-Error "❌ Error invoking Verify API: $_"
-              exit 1
-          }
+          - task: PowerShell@2
+            displayName: "Invoke Verify API using PowerShell (Raw Data)"
+            inputs:
+              targetType: 'inline'
+              script: |
+                # ✅ Define API URL and File Path
+                $url = "$(VERIFY_FUNCTION_URL)"
+                $signedCodePath = "$(System.DefaultWorkingDirectory)/output.zip"
+                
+                # ✅ Check if File Exists
+                if (-Not (Test-Path $signedCodePath)) {
+                    Write-Error "❌ Signed file not found: $signedCodePath"
+                    exit 1
+                }
+                
+                # ✅ Prepare HTTP Headers for API Call
+                $headers = @{
+                    "Content-Type" = "application/octet-stream"  # Use this for raw binary zip
+                }
+                
+                # ✅ Send Raw Binary Data Using Invoke-RestMethod
+                try {
+                    Write-Output "🔎 Invoking Azure Function to Verify with Raw Binary Data..."
+                    
+                    # 🚀 Sending raw binary zip using -InFile
+                    $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -InFile $signedCodePath
+                    
+                    # ✅ Check if Verification was Successful
+                    Write-Output "🔎 Verification Response: $response"
+                    
+                    if ($response -match "Signature verified successfully") {
+                        Write-Output "✅ Verification successful. File is authentic."
+                    }
+                    else {
+                        Write-Error "❌ Verification failed! Possible tampering detected."
+                        exit 1
+                    }
+                }
+                catch {
+                    # ✅ Capture Detailed Error Information
+                    Write-Error "❌ Error invoking Verify API: $_"
+                    exit 1
+                }
 
           # ✅ Step 7: Publish Verified Output (output.zip)
           - task: PublishPipelineArtifact@1
