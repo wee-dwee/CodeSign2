@@ -92,45 +92,44 @@ stages:
               artifactName: "output"
             displayName: "Publish Signed Artifact"
 
-          # ✅ Step 6: Invoke Azure Function for Verification (Text Response)
-          - task: PowerShell@2
-            displayName: "Invoke Verify API using PowerShell"
-            inputs:
-              targetType: 'inline'
-              script: |
-                $url = "$(VERIFY_FUNCTION_URL)"
-                
-                # ✅ Correct file path
-                $signedCodePath = "$(System.DefaultWorkingDirectory)/output.zip"
-                
-                # ✅ Check if file exists
-                if (-Not (Test-Path $signedCodePath)) {
-                  Write-Error "❌ Signed file not found: $signedCodePath"
+          # ✅ Define API URL and File Path
+          $url = "$(VERIFY_FUNCTION_URL)"
+          $signedCodePath = "$(System.DefaultWorkingDirectory)/output.zip"
+          
+          # ✅ Check if File Exists
+          if (-Not (Test-Path $signedCodePath)) {
+              Write-Error "❌ Signed file not found: $signedCodePath"
+              exit 1
+          }
+          
+          # ✅ Invoke Verify API to Check Signature
+          Write-Output "🔎 Invoking Azure Function to Verify..."
+          
+          try {
+              # ✅ Prepare HTTP Headers for API Call
+              $headers = @{
+                  "Content-Type" = "application/octet-stream"  # Correct Content-Type for binary zip
+              }
+          
+              # ✅ Send File Using Invoke-RestMethod (Binary Mode)
+              $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -InFile $signedCodePath -ContentType "application/zip"
+          
+              # ✅ Check if Verification was Successful
+              Write-Output "🔎 Verification Response: $response"
+          
+              if ($response -match "Signature verified successfully") {
+                  Write-Output "✅ Verification successful. File is authentic."
+              }
+              else {
+                  Write-Error "❌ Verification failed! Possible tampering detected."
                   exit 1
-                }
-                
-                # ✅ Invoke Verify API to Check Signature
-                Write-Output "🔎 Invoking Azure Function to Verify..."
-                
-                try {
-                  # 🚀 Send file to verify
-                  $response = Invoke-RestMethod -Uri $url -Method Post -InFile $signedCodePath -ContentType "application/zip"
-                  
-                  # ✅ Log verification response
-                  Write-Output "🔎 Verification Response: $response"
-                  
-                  # ✅ Check if verification succeeded
-                  if ($response -match "Signature verified successfully") {
-                    Write-Output "✅ Verification successful. File is authentic."
-                  } else {
-                    Write-Error "❌ Verification failed! Possible tampering detected."
-                    exit 1
-                  }
-                  
-                } catch {
-                  Write-Error "❌ Error invoking Verify API: $_"
-                  exit 1
-                }
+              }
+          }
+          catch {
+              # ✅ Capture Detailed Error Information
+              Write-Error "❌ Error invoking Verify API: $_"
+              exit 1
+          }
 
           # ✅ Step 7: Publish Verified Output (output.zip)
           - task: PublishPipelineArtifact@1
