@@ -48,36 +48,64 @@ stages:
               echo "✅ Base64 encoding complete."
             displayName: "Encode ZIP File"
 
-          # ✅ Step 5: Invoke Azure Function for Signing (Using PowerShell for Better Debugging)
+          # ✅ Step 5: Invoke Azure Function for Signing (With 3 Files)
           - task: PowerShell@2
             displayName: "Invoke Sign API using PowerShell"
             inputs:
               targetType: 'inline'
               script: |
                 $url = "$(SIGN_FUNCTION_URL)"
-                $base64Data = Get-Content -Path "code_to_sign.b64" -Raw
-                $jsonBody = @{
-                  task = @{
-                    file = $base64Data
-                    metadata = "sign_request"
-                  }
-                } | ConvertTo-Json -Depth 3
-
+                
+                # ✅ Prepare file paths
+                $filePath = "$(System.DefaultWorkingDirectory)/code_to_sign.zip"
+                $privateKeyPath = "$(System.DefaultWorkingDirectory)/private_key.asc"
+                $passphrase = "dwee1234@@"  # Replace with your secure passphrase
+          
+                # ✅ Create Form Data for Multipart Request
+                $formData = @(
+                  @{name="file"; filename=$(Split-Path -Leaf $filePath); content=[System.IO.File]::ReadAllBytes($filePath) },
+                  @{name="privateKeyFile"; filename=$(Split-Path -Leaf $privateKeyPath); content=[System.IO.File]::ReadAllBytes($privateKeyPath) },
+                  @{name="passphrase"; content=$passphrase }
+                )
+          
                 Write-Output "✍️ Invoking Azure Function to Sign..."
+          
                 try {
-                  $response = Invoke-RestMethod -Uri $url -Method Post -Body $jsonBody -ContentType "application/json"
+                  # ✅ Invoke Azure Function with multipart/form-data
+                  $boundary = [System.Guid]::NewGuid().ToString()
+                  $body = @()
+          
+                  foreach ($item in $formData) {
+                    if ($item.name -eq "passphrase") {
+                      $body += "--$boundary"
+                      $body += "Content-Disposition: form-data; name=`"$($item.name)`"`r`n"
+                      $body += "`r`n$($item.content)`r`n"
+                    }
+                    else {
+                      $fileData = [System.Convert]::ToBase64String($item.content)
+                      $body += "--$boundary"
+                      $body += "Content-Disposition: form-data; name=`"$($item.name)`"; filename=`"$($item.filename)`"`r`n"
+                      $body += "Content-Type: application/octet-stream`r`n"
+                      $body += "`r`n$fileData`r`n"
+                    }
+                  }
+                  $body += "--$boundary--`r`n"
+                  $bodyString = [string]::Join("`r`n", $body)
+          
+                  # ✅ Send request with form-data
+                  $response = Invoke-RestMethod -Uri $url -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyString
                   Write-Output "🔎 Response: $response"
                   
-                  # Check if response is empty or doesn't contain signed file
+                  # ✅ Check if response contains the signed file
                   if (-not $response.signedFile) {
                     Write-Error "❌ Signing failed. No signed file received."
                     exit 1
                   }
-
-                  # Save signed file to signed_code.zip
+          
+                  # ✅ Save signed file to signed_code.zip
                   [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($response.signedFile)) | Set-Content signed_code.zip
                   Write-Output "✅ Code signed successfully."
-
+          
                 } catch {
                   Write-Error "❌ Error invoking Sign API: $_"
                   exit 1
