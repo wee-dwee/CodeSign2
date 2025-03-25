@@ -98,7 +98,7 @@ stages:
                 -d @- "$(VERIFY_FUNCTION_URL)" <<EOF
               {
                 "task": {
-                  "file": "$(cat signed_code.b64)",
+                  "file": "$(cat signed_code.zip)",
                   "metadata": "verify_request"
                 }
               }
