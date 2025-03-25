@@ -117,12 +117,6 @@ stages:
                   Write-Error "❌ Error invoking Sign API: $_"
                   exit 1
                 }
-          # ✅ Step 8: Publish Signed Artifact
-          - task: PublishPipelineArtifact@1
-            inputs:
-              targetPath: "$(System.DefaultWorkingDirectory)/signed_code.zip"
-              artifactName: "signed_code"
-            displayName: "Publish Signed Code Artifact"
 
 
           # ✅ Step 6: Encode Signed File to Base64
@@ -142,7 +136,7 @@ stages:
                 $base64Data = Get-Content -Path "signed_code.b64" -Raw
                 $jsonBody = @{
                   task = @{
-                    file = $base64Data
+                    output.zip = $signed_code.zip
                     metadata = "verify_request"
                   }
                 } | ConvertTo-Json -Depth 3
