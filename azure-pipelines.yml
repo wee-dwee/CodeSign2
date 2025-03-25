@@ -114,11 +114,11 @@ stages:
                 try {
                     # ✅ Prepare HTTP Headers for API Call
                     $headers = @{
-                        "Content-Type" = "application/octet-stream"  # Correct Content-Type for binary zip
+                        "Content-Type" = "multipart/form-data"  # Correct Content-Type for binary zip
                     }
                 
                     # ✅ Send File Using Invoke-RestMethod (Binary Mode)
-                    $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -InFile $signedCodePath -ContentType "application/zip"
+                    $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -InFile $signedCodePath
                 
                     # ✅ Check if Verification was Successful
                     Write-Output "🔎 Verification Response: $response"
