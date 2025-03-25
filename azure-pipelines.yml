@@ -48,10 +48,10 @@ stages:
               echo "✅ Base64 encoding complete."
             displayName: "Encode ZIP File"
 
-          # ✅ Step 5: Invoke Azure Function for Signing
+         # ✅ Step 5: Invoke Azure Function for Signing (Updated with Debug)
           - script: |
               echo "✍️ Invoking Azure Function to Sign..."
-              SIGN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
+              SIGN_RESPONSE=$(curl -v -s -X POST -H "Content-Type: application/json" \
                 -d @- "$(SIGN_FUNCTION_URL)" <<EOF
               {
                 "task": {
@@ -62,12 +62,12 @@ stages:
               EOF
               )
               
-              # Debug: Print raw response
-              echo "🔎 Raw Response from Azure Function: $SIGN_RESPONSE"
+              # Debug: Print full raw response
+              echo "🔎 Full CURL Response: $SIGN_RESPONSE"
               
               # Check for empty or invalid response
               if [ -z "$SIGN_RESPONSE" ]; then
-                echo "❌ Empty response from Azure Function. Exiting."
+                echo "❌ Empty response from Azure Function. Check function logs. Exiting."
                 exit 1
               fi
               
@@ -82,6 +82,7 @@ stages:
               echo $SIGN_RESPONSE | jq -r '.signedFile' | base64 -d > signed_code.zip
               echo "✅ Code signed successfully."
             displayName: "Sign Code using Azure Function"
+
 
           # ✅ Step 6: Encode Signed File to Base64
           - script: |
