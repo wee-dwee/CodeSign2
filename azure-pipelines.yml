@@ -21,6 +21,9 @@ stages:
         displayName: "Sign and Verify Job"
         steps:
           # ✅ Step 1: Debug Variables
+          - task: Checkout@1
+            displayName: "Checkout Code"
+
           - script: |
               echo "🔍 Checking Variable Values..."
               echo "SIGN_FUNCTION_URL: $(SIGN_FUNCTION_URL)"
