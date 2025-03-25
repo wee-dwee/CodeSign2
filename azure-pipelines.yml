@@ -20,11 +20,13 @@ stages:
       - job: SignAndVerifyJob
         displayName: "Sign and Verify Job"
         steps:
-          # ✅ Step 1: Checkout Code - Correct Task for Azure DevOps
-          - task: Checkout@2
-            inputs:
-              clean: true
-            displayName: "Checkout Code"
+          # ✅ Step 1: Manual Git Clone Instead of Checkout
+          - script: |
+              echo "🔄 Cloning repository manually..."
+              git clone https://$(System.AccessToken)@dev.azure.com/<your-org-name>/<your-project-name>/_git/<your-repo-name>
+              cd <your-repo-name>
+              echo "✅ Code cloned successfully."
+            displayName: "Clone Repository Manually"
 
           # ✅ Step 2: Debug Variables
           - script: |
