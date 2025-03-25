@@ -49,25 +49,28 @@ stages:
               }
               EOF
               )
-              
-              # Debug: Print raw response
-              echo "🔎 Raw Response from Azure Function: $SIGN_RESPONSE"
-              
+
+              # Debug: Print raw response from signing
+              echo "🔎 Raw SIGN_RESPONSE: $SIGN_RESPONSE"
+
               # Check for empty or invalid response
-              if [ -z "$SIGN_RESPONSE" ]; then
-                echo "❌ Empty response from Azure Function. Exiting."
+              if [ -z "$SIGN_RESPONSE" ] || [ "$SIGN_RESPONSE" == "null" ]; then
+                echo "❌ Empty or invalid response from SignAndExport. Exiting."
                 exit 1
               fi
-              
-              # Check if the response contains 'signedFile'
-              SIGN_STATUS=$(echo $SIGN_RESPONSE | jq -r '.status')
-              if [ "$SIGN_STATUS" != "success" ]; then
-                echo "❌ Signing failed. Status: $SIGN_STATUS"
+
+              # Extract values and handle missing keys gracefully
+              SIGN_STATUS=$(echo $SIGN_RESPONSE | jq -r '.status // empty')
+              SIGNED_FILE=$(echo $SIGN_RESPONSE | jq -r '.signedFile // empty')
+
+              # Check if signing was successful
+              if [ "$SIGN_STATUS" != "success" ] || [ -z "$SIGNED_FILE" ]; then
+                echo "❌ Signing failed or signed file missing. Status: $SIGN_STATUS"
                 exit 1
               fi
-              
-              # Save signed file to signed_code.zip
-              echo $SIGN_RESPONSE | jq -r '.signedFile' | base64 -d > signed_code.zip
+
+              # Decode base64 and save signed code
+              echo "$SIGNED_FILE" | base64 -d > signed_code.zip
               echo "✅ Code signed successfully."
             displayName: "Sign Code using Azure Function"
 
@@ -91,18 +94,21 @@ stages:
               }
               EOF
               )
-              
-              # Debug: Print raw response
-              echo "🔎 Raw Response from Azure Function: $VERIFY_RESPONSE"
-              
+
+              # Debug: Print raw response from verification
+              echo "🔎 Raw VERIFY_RESPONSE: $VERIFY_RESPONSE"
+
               # Check for empty or invalid response
-              if [ -z "$VERIFY_RESPONSE" ]; then
-                echo "❌ Empty response from Azure Function. Exiting."
+              if [ -z "$VERIFY_RESPONSE" ] || [ "$VERIFY_RESPONSE" == "null" ]; then
+                echo "❌ Empty or invalid response from VerifySignature. Exiting."
                 exit 1
               fi
-              
-              # Check verification result
-              VERIFIED=$(echo $VERIFY_RESPONSE | jq -r '.verificationStatus')
+
+              # Extract values and handle missing keys gracefully
+              VERIFY_STATUS=$(echo $VERIFY_RESPONSE | jq -r '.status // empty')
+              VERIFIED=$(echo $VERIFY_RESPONSE | jq -r '.verificationStatus // empty')
+
+              # Check if verification was successful
               if [ "$VERIFIED" != "true" ]; then
                 echo "❌ Signature verification failed. Stopping pipeline."
                 exit 1
