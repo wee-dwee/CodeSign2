@@ -66,7 +66,7 @@ stages:
                 
                 # ✅ Invoke API with files using -InFile (Binary Mode)
                 Write-Output "✍️ Invoking Azure Function to Sign..."
-                $outputZipPath = "$(System.DefaultWorkingDirectory)/signed_code.zip"
+                $outputZipPath = "$(System.DefaultWorkingDirectory)/output.zip"
                 
                 $form = @{
                   file = Get-Item -Path $filePath
@@ -83,13 +83,13 @@ stages:
                   exit 1
                 }
                 
-                Write-Output "✅ Code signed and saved to signed_code.zip successfully."
+                Write-Output "✅ Code signed and saved to output.zip successfully."
 
           # ✅ Step 5: Publish Signed Artifact
           - task: PublishPipelineArtifact@1
             inputs:
-              targetPath: "$(System.DefaultWorkingDirectory)/signed_code.zip"
-              artifactName: "signed_code"
+              targetPath: "$(System.DefaultWorkingDirectory)/output.zip"
+              artifactName: "output"
             displayName: "Publish Signed Artifact"
 
           # ✅ Step 6: Invoke Azure Function for Verification (Text Response)
@@ -101,7 +101,7 @@ stages:
                 $url = "$(VERIFY_FUNCTION_URL)"
                 
                 # ✅ Correct file path
-                $signedCodePath = "$(System.DefaultWorkingDirectory)/signed_code.zip"
+                $signedCodePath = "$(System.DefaultWorkingDirectory)/output.zip"
                 
                 # ✅ Check if file exists
                 if (-Not (Test-Path $signedCodePath)) {
@@ -135,7 +135,7 @@ stages:
           # ✅ Step 7: Publish Verified Output (output.zip)
           - task: PublishPipelineArtifact@1
             inputs:
-              targetPath: "$(System.DefaultWorkingDirectory)/signed_code.zip"
+              targetPath: "$(System.DefaultWorkingDirectory)/output.zip"
               artifactName: "output_zip"
             displayName: "Publish Verified Output (output.zip)"
 
@@ -161,6 +161,6 @@ stages:
               az webapp deployment source config-zip \
                 --resource-group myResourceGroup \
                 --name my-web-app \
-                --src "$(System.DefaultWorkingDirectory)/output/signed_code.zip"
+                --src "$(System.DefaultWorkingDirectory)/output/output.zip"
               echo "✅ Deployment completed successfully."
             displayName: "Deploy Verified Output"
