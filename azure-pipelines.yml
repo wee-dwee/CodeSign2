@@ -6,7 +6,9 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+# ✅ Enable Debug for Variable Tracking
 variables:
+  System.Debug: true
   SIGN_FUNCTION_URL: "https://my-function-app26012004.azurewebsites.net/api/SignAndExport?code=rvAZsWPQvdCVgCnCGKop1ocVwh5okKv9oSNTHhgoth2yAzFul1duiA=="
   VERIFY_FUNCTION_URL: "https://my-function-app26012004.azurewebsites.net/api/VerifySignature?code=mO4i4ujkrXC5aFWF1H1kr95wqe7SxxcG1D7tbZTFwVm6AzFukp4BHQ=="
 
@@ -18,29 +20,37 @@ stages:
       - job: SignAndVerifyJob
         displayName: "Sign and Verify Job"
         steps:
-          # ✅ Step 1: Checkout Code
-          - task: Checkout@1
+          # ✅ Step 1: Debug Variables
+          - script: |
+              echo "🔍 Checking Variable Values..."
+              echo "SIGN_FUNCTION_URL: $(SIGN_FUNCTION_URL)"
+              echo "VERIFY_FUNCTION_URL: $(VERIFY_FUNCTION_URL)"
+              echo "✅ Variables successfully loaded."
+            displayName: "Debug Variables"
+
+          # ✅ Step 2: Checkout Code
+          - task: Checkout@2
             displayName: "Checkout Code"
 
-          # ✅ Step 2: Zip the Code
+          # ✅ Step 3: Zip the Code
           - script: |
               echo "📦 Zipping the code..."
               zip -r code_to_sign.zip ./
               echo "✅ Code zipped successfully."
             displayName: "Zip the Code for Signing"
 
-          # ✅ Step 3: Encode Zip File in Base64
+          # ✅ Step 4: Encode Zip File to Base64
           - script: |
               echo "🔐 Encoding ZIP to base64..."
               base64 -w 0 code_to_sign.zip > code_to_sign.b64
               echo "✅ Base64 encoding complete."
             displayName: "Encode ZIP File"
 
-          # ✅ Step 4: Invoke Azure Function for Signing
+          # ✅ Step 5: Invoke Azure Function for Signing
           - script: |
               echo "✍️ Invoking Azure Function to Sign..."
               SIGN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
-                -d @- "$SIGN_FUNCTION_URL" <<EOF
+                -d @- "$(SIGN_FUNCTION_URL)" <<EOF
               {
                 "task": {
                   "file": "$(cat code_to_sign.b64)",
@@ -49,43 +59,40 @@ stages:
               }
               EOF
               )
-
-              # Debug: Print raw response from signing
-              echo "🔎 Raw SIGN_RESPONSE: $SIGN_RESPONSE"
-
+              
+              # Debug: Print raw response
+              echo "🔎 Raw Response from Azure Function: $SIGN_RESPONSE"
+              
               # Check for empty or invalid response
-              if [ -z "$SIGN_RESPONSE" ] || [ "$SIGN_RESPONSE" == "null" ]; then
-                echo "❌ Empty or invalid response from SignAndExport. Exiting."
+              if [ -z "$SIGN_RESPONSE" ]; then
+                echo "❌ Empty response from Azure Function. Exiting."
                 exit 1
               fi
-
-              # Extract values and handle missing keys gracefully
-              SIGN_STATUS=$(echo $SIGN_RESPONSE | jq -r '.status // empty')
-              SIGNED_FILE=$(echo $SIGN_RESPONSE | jq -r '.signedFile // empty')
-
-              # Check if signing was successful
-              if [ "$SIGN_STATUS" != "success" ] || [ -z "$SIGNED_FILE" ]; then
-                echo "❌ Signing failed or signed file missing. Status: $SIGN_STATUS"
+              
+              # Check if the response contains 'signedFile'
+              SIGN_STATUS=$(echo $SIGN_RESPONSE | jq -r '.status')
+              if [ "$SIGN_STATUS" != "success" ]; then
+                echo "❌ Signing failed. Status: $SIGN_STATUS"
                 exit 1
               fi
-
-              # Decode base64 and save signed code
-              echo "$SIGNED_FILE" | base64 -d > signed_code.zip
+              
+              # Save signed file to signed_code.zip
+              echo $SIGN_RESPONSE | jq -r '.signedFile' | base64 -d > signed_code.zip
               echo "✅ Code signed successfully."
             displayName: "Sign Code using Azure Function"
 
-          # ✅ Step 5: Encode Signed File to Base64
+          # ✅ Step 6: Encode Signed File to Base64
           - script: |
               echo "🔐 Encoding signed ZIP to base64..."
               base64 -w 0 signed_code.zip > signed_code.b64
               echo "✅ Signed file encoded successfully."
             displayName: "Encode Signed ZIP File"
 
-          # ✅ Step 6: Invoke Azure Function for Verification
+          # ✅ Step 7: Invoke Azure Function for Verification
           - script: |
               echo "🔎 Invoking Azure Function to Verify..."
               VERIFY_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
-                -d @- "$VERIFY_FUNCTION_URL" <<EOF
+                -d @- "$(VERIFY_FUNCTION_URL)" <<EOF
               {
                 "task": {
                   "file": "$(cat signed_code.b64)",
@@ -94,21 +101,18 @@ stages:
               }
               EOF
               )
-
-              # Debug: Print raw response from verification
-              echo "🔎 Raw VERIFY_RESPONSE: $VERIFY_RESPONSE"
-
+              
+              # Debug: Print raw response
+              echo "🔎 Raw Response from Azure Function: $VERIFY_RESPONSE"
+              
               # Check for empty or invalid response
-              if [ -z "$VERIFY_RESPONSE" ] || [ "$VERIFY_RESPONSE" == "null" ]; then
-                echo "❌ Empty or invalid response from VerifySignature. Exiting."
+              if [ -z "$VERIFY_RESPONSE" ]; then
+                echo "❌ Empty response from Azure Function. Exiting."
                 exit 1
               fi
-
-              # Extract values and handle missing keys gracefully
-              VERIFY_STATUS=$(echo $VERIFY_RESPONSE | jq -r '.status // empty')
-              VERIFIED=$(echo $VERIFY_RESPONSE | jq -r '.verificationStatus // empty')
-
-              # Check if verification was successful
+              
+              # Check verification result
+              VERIFIED=$(echo $VERIFY_RESPONSE | jq -r '.verificationStatus')
               if [ "$VERIFIED" != "true" ]; then
                 echo "❌ Signature verification failed. Stopping pipeline."
                 exit 1
@@ -116,7 +120,7 @@ stages:
               echo "✅ Signature verified successfully."
             displayName: "Verify Signature using Azure Function"
 
-          # ✅ Step 7: Publish Signed Artifact
+          # ✅ Step 8: Publish Signed Artifact
           - task: PublishPipelineArtifact@1
             inputs:
               targetPath: "$(System.DefaultWorkingDirectory)/signed_code.zip"
@@ -132,14 +136,14 @@ stages:
       - job: DeployJob
         displayName: "Deploy Signed Code"
         steps:
-          # ✅ Step 8: Download Signed Artifact
+          # ✅ Step 9: Download Signed Artifact
           - task: DownloadPipelineArtifact@2
             inputs:
               artifactName: "signed_code"
               targetPath: "$(System.DefaultWorkingDirectory)/signed_code"
             displayName: "Download Signed Artifact"
 
-          # ✅ Step 9: Deploy Signed Artifact to Azure App Service
+          # ✅ Step 10: Deploy Signed Artifact to Azure App Service
           - script: |
               echo "🚀 Deploying signed code to Azure App Service..."
               az webapp deployment source config-zip \
