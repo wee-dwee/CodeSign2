@@ -50,66 +50,74 @@ stages:
 
           # ✅ Step 5: Invoke Azure Function for Signing (With 3 Files)
           - task: PowerShell@2
-            displayName: "Invoke Sign API using PowerShell"
+            displayName: "Invoke Sign API using PowerShell (Binary Handling)"
             inputs:
               targetType: 'inline'
               script: |
                 $url = "$(SIGN_FUNCTION_URL)"
                 
-                # ✅ Prepare file paths
+                # ✅ Correct file paths
                 $filePath = "$(System.DefaultWorkingDirectory)/code_to_sign.zip"
                 $privateKeyPath = "$(System.DefaultWorkingDirectory)/private-key.asc"
-                $passphrase = "dwee1234@@"  # Replace with your secure passphrase
+                $passphrase = "my-secret-passphrase"  # Or use a secure variable
+                
+                # ✅ Check if files exist
+                if (-Not (Test-Path $filePath)) {
+                  Write-Error "❌ File not found: $filePath"
+                  exit 1
+                }
+                if (-Not (Test-Path $privateKeyPath)) {
+                  Write-Error "❌ Private key not found: $privateKeyPath"
+                  exit 1
+                }
           
-                # ✅ Create Form Data for Multipart Request
-                $formData = @(
-                  @{name="file"; filename=$(Split-Path -Leaf $filePath); content=[System.IO.File]::ReadAllBytes($filePath) },
-                  @{name="privateKeyFile"; filename=$(Split-Path -Leaf $filePath); content=[System.IO.File]::ReadAllBytes($privateKeyPath) },
-                  @{name="passphrase"; content=$passphrase }
-                )
+                # ✅ Create Multipart Form Data
+                $boundary = [System.Guid]::NewGuid().ToString()
+                $LF = "`r`n"
           
-                Write-Output "✍️ Invoking Azure Function to Sign..."
+                # 🔹 Add File Content
+                $fileContent = [System.IO.File]::ReadAllBytes($filePath)
+                $fileData = "--$boundary$LF" +
+                            "Content-Disposition: form-data; name=`"file`"; filename=`"$(Split-Path -Leaf $filePath)`"$LF" +
+                            "Content-Type: application/zip$LF$LF" +
+                            [System.Text.Encoding]::Default.GetString($fileContent) + $LF
           
+                # 🔹 Add Private Key
+                $keyContent = [System.IO.File]::ReadAllBytes($privateKeyPath)
+                $keyData = "--$boundary$LF" +
+                            "Content-Disposition: form-data; name=`"privateKeyFile`"; filename=`"$(Split-Path -Leaf $privateKeyPath)`"$LF" +
+                            "Content-Type: application/octet-stream$LF$LF" +
+                            [System.Text.Encoding]::Default.GetString($keyContent) + $LF
+          
+                # 🔹 Add Passphrase
+                $passphraseData = "--$boundary$LF" +
+                                  "Content-Disposition: form-data; name=`"passphrase`"$LF$LF" +
+                                  "$passphrase$LF"
+          
+                # ✅ Combine Form Data
+                $body = $fileData + $keyData + $passphraseData + "--$boundary--$LF"
+          
+                # ✅ Invoke REST API with Binary Handling
                 try {
-                  # ✅ Invoke Azure Function with multipart/form-data
-                  $boundary = [System.Guid]::NewGuid().ToString()
-                  $body = @()
+                  Write-Output "✍️ Invoking Azure Function to Sign..."
+                  $outputZipPath = "$(System.DefaultWorkingDirectory)/signed_code.zip"
           
-                  foreach ($item in $formData) {
-                    if ($item.name -eq "passphrase") {
-                      $body += "--$boundary"
-                      $body += "Content-Disposition: form-data; name=`"$($item.name)`"`r`n"
-                      $body += "`r`n$($item.content)`r`n"
-                    }
-                    else {
-                      $fileData = [System.Convert]::ToBase64String($item.content)
-                      $body += "--$boundary"
-                      $body += "Content-Disposition: form-data; name=`"$($item.name)`"; filename=`"$($item.filename)`"`r`n"
-                      $body += "Content-Type: application/octet-stream`r`n"
-                      $body += "`r`n$fileData`r`n"
-                    }
-                  }
-                  $body += "--$boundary--`r`n"
-                  $bodyString = [string]::Join("`r`n", $body)
+                  # 🚀 Invoke API and save response to signed_code.zip
+                  Invoke-WebRequest -Uri $url -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -OutFile $outputZipPath
           
-                  # ✅ Send request with form-data
-                  $response = Invoke-RestMethod -Uri $url -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyString
-                  Write-Output "🔎 Response: $response"
-                  
-                  # ✅ Check if response contains the signed file
-                  if (-not $response.signedFile) {
-                    Write-Error "❌ Signing failed. No signed file received."
+                  # ✅ Check if file is created
+                  if (-Not (Test-Path $outputZipPath)) {
+                    Write-Error "❌ Signed file not received. Check Azure Function logs."
                     exit 1
                   }
           
-                  # ✅ Save signed file to signed_code.zip
-                  [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($response.signedFile)) | Set-Content signed_code.zip
-                  Write-Output "✅ Code signed successfully."
+                  Write-Output "✅ Code signed and saved to signed_code.zip successfully."
           
                 } catch {
                   Write-Error "❌ Error invoking Sign API: $_"
                   exit 1
                 }
+
 
           # ✅ Step 6: Encode Signed File to Base64
           - script: |
