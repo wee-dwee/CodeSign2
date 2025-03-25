@@ -154,4 +154,4 @@ stages:
                 --name my-web-app \
                 --src "$(System.DefaultWorkingDirectory)/signed_code/signed_code.zip"
               echo "✅ Deployment completed successfully."
-            displayName: "Deploy to Azure
+            displayName: "Deploy to Azure App Service"
