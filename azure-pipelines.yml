@@ -10,7 +10,7 @@ pool:
 variables:
   System.Debug: true
   SIGN_FUNCTION_URL: "https://my-function-app26012004.azurewebsites.net/api/SignAndExport?code=rvAZsWPQvdCVgCnCGKop1ocVwh5okKv9oSNTHhgoth2yAzFul1duiA=="
-  VERIFY_FUNCTION_URL: "https://my-function-app26012004.azurewebsites.net/api/VerifySignature?code=mO4i4ujkrXC5aFWF1H1kr95wqe7SxxcG1D7tbZTFwVm6AzFukp4BHQ=="
+  VERIFY_FUNCTION_URL: "https://my-function-app26012004.azurewebsites.net/api/verifysignature?code=mO4i4ujkrXC5aFWF1H1kr95wqe7SxxcG1D7tbZTFwVm6AzFukp4BHQ=="
 
 stages:
   # ✅ Stage 1: Sign and Verify
