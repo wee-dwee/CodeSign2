@@ -126,38 +126,58 @@ stages:
               echo "✅ Signed file encoded successfully."
             displayName: "Encode Signed ZIP File"
 
-          # ✅ Step 7: Invoke Azure Function for Verification
-          - task: PowerShell@2
-            displayName: "Invoke Verify API using PowerShell"
-            inputs:
-              targetType: 'inline'
-              script: |
-                $url = "$(VERIFY_FUNCTION_URL)"
-                $base64Data = Get-Content -Path "signed_code.b64" -Raw
-                $jsonBody = @{
-                  task = @{
-                    file = $signed_code.zip
-                    metadata = "verify_request"
-                  }
-                } | ConvertTo-Json -Depth 3
-
+        # ✅ Step 7: Invoke Azure Function for Verification (Binary File)
+        - task: PowerShell@2
+          displayName: "Invoke Verify API using PowerShell (Binary Handling)"
+          inputs:
+            targetType: 'inline'
+            script: |
+              $url = "$(VERIFY_FUNCTION_URL)"
+              
+              # ✅ Correct file path
+              $signedCodePath = "$(System.DefaultWorkingDirectory)/signed_code.zip"
+              
+              # ✅ Check if file exists
+              if (-Not (Test-Path $signedCodePath)) {
+                Write-Error "❌ Signed file not found: $signedCodePath"
+                exit 1
+              }
+              
+              # ✅ Create Multipart Form Data
+              $boundary = [System.Guid]::NewGuid().ToString()
+              $LF = "`r`n"
+              
+              # 🔹 Add Signed File Content
+              $signedCodeContent = [System.IO.File]::ReadAllBytes($signedCodePath)
+              $signedCodeData = "--$boundary$LF" +
+                                "Content-Disposition: form-data; name=`"file`"; filename=`"$(Split-Path -Leaf $signedCodePath)`"$LF" +
+                                "Content-Type: application/zip$LF$LF" +
+                                [System.Text.Encoding]::Default.GetString($signedCodeContent) + $LF
+              
+              # ✅ Combine Form Data
+              $body = $signedCodeData + "--$boundary--$LF"
+              
+              # ✅ Invoke REST API to Verify and Receive output.zip
+              try {
                 Write-Output "🔎 Invoking Azure Function to Verify..."
-                try {
-                  $response = Invoke-RestMethod -Uri $url -Method Post -Body $jsonBody -ContentType "application/json"
-                  Write-Output "🔎 Response: $response"
-                  
-                  # Check verification status
-                  if ($response.verificationStatus -ne "true") {
-                    Write-Error "❌ Signature verification failed."
-                    exit 1
-                  }
-
-                  Write-Output "✅ Signature verified successfully."
-
-                } catch {
-                  Write-Error "❌ Error invoking Verify API: $_"
+                $outputZipPath = "$(System.DefaultWorkingDirectory)/output.zip"
+                
+                # 🚀 Invoke API and save response as output.zip
+                Invoke-WebRequest -Uri $url -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -OutFile $outputZipPath
+                
+                # ✅ Check if output.zip is created
+                if (-Not (Test-Path $outputZipPath)) {
+                  Write-Error "❌ Verification failed. No output.zip received."
                   exit 1
                 }
+                
+                Write-Output "✅ Verification successful. Saved as output.zip."
+                
+              } catch {
+                Write-Error "❌ Error invoking Verify API: $_"
+                exit 1
+              }
+
 
           # ✅ Step 8: Publish Signed Artifact
           - task: PublishPipelineArtifact@1
