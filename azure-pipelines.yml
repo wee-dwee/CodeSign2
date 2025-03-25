@@ -20,13 +20,11 @@ stages:
       - job: SignAndVerifyJob
         displayName: "Sign and Verify Job"
         steps:
-          # ✅ Step 1: Manual Git Clone Instead of Checkout
-          - script: |
-              echo "🔄 Cloning repository manually..."
-              git clone https://$(System.AccessToken)@dev.azure.com/<your-org-name>/<your-project-name>/_git/<your-repo-name>
-              cd <your-repo-name>
-              echo "✅ Code cloned successfully."
-            displayName: "Clone Repository Manually"
+          # ✅ Step 1: Checkout Code (Corrected)
+          - checkout: self
+            fetchDepth: 1
+            persistCredentials: true
+            displayName: "Checkout Code"
 
           # ✅ Step 2: Debug Variables
           - script: |
