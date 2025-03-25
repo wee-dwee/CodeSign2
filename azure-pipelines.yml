@@ -21,9 +21,6 @@ stages:
         displayName: "Sign and Verify Job"
         steps:
           # ✅ Step 1: Debug Variables
-          - task: Checkout@1
-            displayName: "Checkout Code"
-
           - script: |
               echo "🔍 Checking Variable Values..."
               echo "SIGN_FUNCTION_URL: $(SIGN_FUNCTION_URL)"
@@ -31,8 +28,11 @@ stages:
               echo "✅ Variables successfully loaded."
             displayName: "Debug Variables"
 
-          # ✅ Step 2: Checkout Code
-          - task: Checkout@2
+          # ✅ Step 2: Checkout Code - Correct Task Name and Version
+          - task: GitHubCheckout@1
+            inputs:
+              repository: self
+              fetchDepth: 1
             displayName: "Checkout Code"
 
           # ✅ Step 3: Zip the Code
