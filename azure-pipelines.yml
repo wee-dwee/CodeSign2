@@ -20,7 +20,7 @@ stages:
       - job: SignAndVerifyJob
         displayName: "Sign and Verify Job"
         steps:
-          # ✅ Step 1: Checkout Code (Corrected)
+          # ✅ Step 1: Checkout Code
           - checkout: self
             fetchDepth: 1
             persistCredentials: true
@@ -48,41 +48,40 @@ stages:
               echo "✅ Base64 encoding complete."
             displayName: "Encode ZIP File"
 
-         # ✅ Step 5: Invoke Azure Function for Signing (Updated with Debug)
-          - script: |
-              echo "✍️ Invoking Azure Function to Sign..."
-              SIGN_RESPONSE=$(curl -v -s -X POST -H "Content-Type: application/json" \
-                -d @- "$(SIGN_FUNCTION_URL)" <<EOF
-              {
-                "task": {
-                  "file": "$(cat code_to_sign.b64)",
-                  "metadata": "sign_request"
-                }
-              }
-              EOF
-              )
-              
-              # Debug: Print full raw response
-              echo "🔎 Full CURL Response: $SIGN_RESPONSE"
-              
-              # Check for empty or invalid response
-              if [ -z "$SIGN_RESPONSE" ]; then
-                echo "❌ Empty response from Azure Function. Check function logs. Exiting."
-                exit 1
-              fi
-              
-              # Check if the response contains 'signedFile'
-              SIGN_STATUS=$(echo $SIGN_RESPONSE | jq -r '.status')
-              if [ "$SIGN_STATUS" != "success" ]; then
-                echo "❌ Signing failed. Status: $SIGN_STATUS"
-                exit 1
-              fi
-              
-              # Save signed file to signed_code.zip
-              echo $SIGN_RESPONSE | jq -r '.signedFile' | base64 -d > signed_code.zip
-              echo "✅ Code signed successfully."
-            displayName: "Sign Code using Azure Function"
+          # ✅ Step 5: Invoke Azure Function for Signing (Using PowerShell for Better Debugging)
+          - task: PowerShell@2
+            displayName: "Invoke Sign API using PowerShell"
+            inputs:
+              targetType: 'inline'
+              script: |
+                $url = "$(SIGN_FUNCTION_URL)"
+                $base64Data = Get-Content -Path "code_to_sign.b64" -Raw
+                $jsonBody = @{
+                  task = @{
+                    file = $base64Data
+                    metadata = "sign_request"
+                  }
+                } | ConvertTo-Json -Depth 3
 
+                Write-Output "✍️ Invoking Azure Function to Sign..."
+                try {
+                  $response = Invoke-RestMethod -Uri $url -Method Post -Body $jsonBody -ContentType "application/json"
+                  Write-Output "🔎 Response: $response"
+                  
+                  # Check if response is empty or doesn't contain signed file
+                  if (-not $response.signedFile) {
+                    Write-Error "❌ Signing failed. No signed file received."
+                    exit 1
+                  }
+
+                  # Save signed file to signed_code.zip
+                  [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($response.signedFile)) | Set-Content signed_code.zip
+                  Write-Output "✅ Code signed successfully."
+
+                } catch {
+                  Write-Error "❌ Error invoking Sign API: $_"
+                  exit 1
+                }
 
           # ✅ Step 6: Encode Signed File to Base64
           - script: |
@@ -92,36 +91,37 @@ stages:
             displayName: "Encode Signed ZIP File"
 
           # ✅ Step 7: Invoke Azure Function for Verification
-          - script: |
-              echo "🔎 Invoking Azure Function to Verify..."
-              VERIFY_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
-                -d @- "$(VERIFY_FUNCTION_URL)" <<EOF
-              {
-                "task": {
-                  "file": "$(cat signed_code.zip)",
-                  "metadata": "verify_request"
+          - task: PowerShell@2
+            displayName: "Invoke Verify API using PowerShell"
+            inputs:
+              targetType: 'inline'
+              script: |
+                $url = "$(VERIFY_FUNCTION_URL)"
+                $base64Data = Get-Content -Path "signed_code.b64" -Raw
+                $jsonBody = @{
+                  task = @{
+                    file = $base64Data
+                    metadata = "verify_request"
+                  }
+                } | ConvertTo-Json -Depth 3
+
+                Write-Output "🔎 Invoking Azure Function to Verify..."
+                try {
+                  $response = Invoke-RestMethod -Uri $url -Method Post -Body $jsonBody -ContentType "application/json"
+                  Write-Output "🔎 Response: $response"
+                  
+                  # Check verification status
+                  if ($response.verificationStatus -ne "true") {
+                    Write-Error "❌ Signature verification failed."
+                    exit 1
+                  }
+
+                  Write-Output "✅ Signature verified successfully."
+
+                } catch {
+                  Write-Error "❌ Error invoking Verify API: $_"
+                  exit 1
                 }
-              }
-              EOF
-              )
-              
-              # Debug: Print raw response
-              echo "🔎 Raw Response from Azure Function: $VERIFY_RESPONSE"
-              
-              # Check for empty or invalid response
-              if [ -z "$VERIFY_RESPONSE" ]; then
-                echo "❌ Empty response from Azure Function. Exiting."
-                exit 1
-              fi
-              
-              # Check verification result
-              VERIFIED=$(echo $VERIFY_RESPONSE | jq -r '.verificationStatus')
-              if [ "$VERIFIED" != "true" ]; then
-                echo "❌ Signature verification failed. Stopping pipeline."
-                exit 1
-              fi
-              echo "✅ Signature verified successfully."
-            displayName: "Verify Signature using Azure Function"
 
           # ✅ Step 8: Publish Signed Artifact
           - task: PublishPipelineArtifact@1
@@ -154,4 +154,4 @@ stages:
                 --name my-web-app \
                 --src "$(System.DefaultWorkingDirectory)/signed_code/signed_code.zip"
               echo "✅ Deployment completed successfully."
-            displayName: "Deploy to Azure App Service"
+            displayName: "Deploy to Azure
