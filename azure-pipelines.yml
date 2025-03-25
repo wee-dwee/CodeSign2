@@ -6,7 +6,7 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-# ✅ Enable Debug for Variable Tracking
+# ✅ Enable Debug for Better Error Tracking
 variables:
   System.Debug: true
   SIGN_FUNCTION_URL: "https://my-function-app26012004.azurewebsites.net/api/SignAndExport?code=rvAZsWPQvdCVgCnCGKop1ocVwh5okKv9oSNTHhgoth2yAzFul1duiA=="
@@ -20,20 +20,19 @@ stages:
       - job: SignAndVerifyJob
         displayName: "Sign and Verify Job"
         steps:
-          # ✅ Step 1: Debug Variables
+          # ✅ Step 1: Checkout Code - Correct Task for Azure DevOps
+          - task: Checkout@2
+            inputs:
+              clean: true
+            displayName: "Checkout Code"
+
+          # ✅ Step 2: Debug Variables
           - script: |
               echo "🔍 Checking Variable Values..."
               echo "SIGN_FUNCTION_URL: $(SIGN_FUNCTION_URL)"
               echo "VERIFY_FUNCTION_URL: $(VERIFY_FUNCTION_URL)"
               echo "✅ Variables successfully loaded."
             displayName: "Debug Variables"
-
-          # ✅ Step 2: Checkout Code - Correct Task Name and Version
-          - task: GitHubCheckout@1
-            inputs:
-              repository: self
-              fetchDepth: 1
-            displayName: "Checkout Code"
 
           # ✅ Step 3: Zip the Code
           - script: |
