@@ -136,7 +136,7 @@ stages:
                 $base64Data = Get-Content -Path "signed_code.b64" -Raw
                 $jsonBody = @{
                   task = @{
-                    output.zip = $signed_code.zip
+                    file = $signed_code.zip
                     metadata = "verify_request"
                   }
                 } | ConvertTo-Json -Depth 3
