@@ -34,12 +34,12 @@ stages:
               echo "✅ Variables successfully loaded."
             displayName: "Debug Variables"
 
-          # ✅ Step 3: Zip the Code
-          - script: |
-              echo "📦 Zipping the code..."
-              zip -r code_to_sign.zip ./
-              echo "✅ Code zipped successfully."
-            displayName: "Zip the Code for Signing"
+          # # ✅ Step 3: Zip the Code
+          # - script: |
+          #     echo "📦 Zipping the code..."
+          #     zip -r code_to_sign.zip ./
+          #     echo "✅ Code zipped successfully."
+          #   displayName: "Zip the Code for Signing"
 
           # ✅ Step 4: Invoke Azure Function for Signing (With 3 Files)
           - task: PowerShell@2
