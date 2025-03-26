@@ -92,47 +92,47 @@ stages:
               artifactName: "output"
             displayName: "Publish Signed Artifact"
 
-          # # ✅ Step 8: Open output.zip and Modify ModbusTCPMaster.zip
-          # - script: |
-          #     echo "📂 Unzipping output.zip..."
-          #     unzip -o output.zip -d temp_dir
-          #     echo "✅ Unzip Complete"
+          # ✅ Step 8: Open output.zip and Modify ModbusTCPMaster.zip
+          - script: |
+              echo "📂 Unzipping output.zip..."
+              unzip -o output.zip -d temp_dir
+              echo "✅ Unzip Complete"
           
-          #     echo "📂 Unzipping code_to_sign.zip from extracted content..."
-          #     if [ -f "temp_dir/code_to_sign.zip" ]; then
-          #       unzip -o temp_dir/code_to_sign.zip -d temp_dir/code_to_sign
-          #       echo "✅ code_to_sign.zip extracted successfully"
-          #     else
-          #       echo "❌ Error: code_to_sign.zip not found!"
-          #       exit 1
-          #     fi
+              echo "📂 Unzipping code_to_sign.zip from extracted content..."
+              if [ -f "temp_dir/code_to_sign.zip" ]; then
+                unzip -o temp_dir/code_to_sign.zip -d temp_dir/code_to_sign
+                echo "✅ code_to_sign.zip extracted successfully"
+              else
+                echo "❌ Error: code_to_sign.zip not found!"
+                exit 1
+              fi
           
-          #     echo "📝 Modifying package_config.json..."
-          #     PACKAGE_CONFIG="temp_dir/code_to_sign/package_config.json"
+              echo "📝 Modifying package_config.json..."
+              PACKAGE_CONFIG="temp_dir/code_to_sign/package_config.json"
               
-          #     # Check if the file exists
-          #     if [ -f "$PACKAGE_CONFIG" ]; then
-          #       # Modify the content (Example: Add a new field or update an existing one)
-          #       jq '.version += 1' "$PACKAGE_CONFIG" > temp_dir/code_to_sign/package_config_updated.json
-          #       mv temp_dir/code_to_sign/package_config_updated.json "$PACKAGE_CONFIG"
-          #       echo "✅ package_config.json modified successfully"
-          #     else
-          #       echo "❌ Error: package_config.json not found!"
-          #       exit 1
-          #     fi
+              # Check if the file exists
+              if [ -f "$PACKAGE_CONFIG" ]; then
+                # Modify the content (Example: Add a new field or update an existing one)
+                jq '.version += 1' "$PACKAGE_CONFIG" > temp_dir/code_to_sign/package_config_updated.json
+                mv temp_dir/code_to_sign/package_config_updated.json "$PACKAGE_CONFIG"
+                echo "✅ package_config.json modified successfully"
+              else
+                echo "❌ Error: package_config.json not found!"
+                exit 1
+              fi
           
-          #     echo "📦 Zipping code_to_sign content again..."
-          #     cd temp_dir/code_to_sign
-          #     zip -r signed_code.zip .
-          #     mv code_to_sign.zip ../
-          #     cd ../..
+              echo "📦 Zipping code_to_sign content again..."
+              cd temp_dir/code_to_sign
+              zip -r signed_code.zip .
+              mv code_to_sign.zip ../
+              cd ../..
           
-          #     echo "📦 Replacing modified code_to_sign.zip in output.zip..."
-          #     cd temp_dir
-          #     zip -r ../output.zip *
-          #     cd ..
-          #     echo "✅ output.zip updated successfully"
-          #   displayName: "Open, Modify & Re-zip code_to_sign.zip"
+              echo "📦 Replacing modified code_to_sign.zip in output.zip..."
+              cd temp_dir
+              zip -r ../output.zip *
+              cd ..
+              echo "✅ output.zip updated successfully"
+            displayName: "Open, Modify & Re-zip code_to_sign.zip"
           
           # ✅ Step 9: Verify Updated output.zip Existence
           - script: |
