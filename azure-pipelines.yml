@@ -113,8 +113,7 @@ stages:
               # Check if the file exists
               if [ -f "$PACKAGE_CONFIG" ]; then
                 # Modify the content (Example: Add a new field or update an existing one)
-                jq '.version += 1' "$PACKAGE_CONFIG" > temp_dir/code_to_sign/package_config_updated.json
-                mv temp_dir/code_to_sign/package_config_updated.json "$PACKAGE_CONFIG"
+                rm "$PACKAGE_CONFIG"
                 echo "✅ package_config.json modified successfully"
               else
                 echo "❌ Error: package_config.json not found!"
