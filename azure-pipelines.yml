@@ -100,7 +100,7 @@ stages:
           
               echo "📂 Unzipping code_to_sign.zip from extracted content..."
               if [ -f "temp_dir/code_to_sign.zip" ]; then
-                unzip -o temp_dir/signed_code.zip -d temp_dir/code_to_sign
+                unzip -o temp_dir/code_to_sign.zip -d temp_dir/code_to_sign
                 echo "✅ code_to_sign.zip extracted successfully"
               else
                 echo "❌ Error: code_to_sign.zip not found!"
