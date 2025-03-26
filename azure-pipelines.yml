@@ -9,7 +9,7 @@ pool:
 # ✅ Enable Debug for Better Error Tracking
 variables:
   System.Debug: true
-  SIGN_FUNCTION_URL: "https://my-function-app26012004.azurewebsites.net/api/signandexport?code=rvAZsWPQvdCVgCnCGKop1ocVwh5okKv9oSNTHhgoth2yAzFul1duiA=="
+  SIGN_FUNCTION_URL: "https://my-function-app26012004.azurewebsites.net/api/SignAndExport?code=rvAZsWPQvdCVgCnCGKop1ocVwh5okKv9oSNTHhgoth2yAzFul1duiA=="
   VERIFY_FUNCTION_URL: "https://my-function-app26012004.azurewebsites.net/api/VerifySignature?code=otiTTgpS5NMhUzTaD6Y7Ij82pWgDTlFNBejznqnMu9lmAzFuGDJgBg=="
 
 stages:
