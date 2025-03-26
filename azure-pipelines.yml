@@ -52,7 +52,7 @@ stages:
                 # ✅ Correct file paths
                 $filePath = "$(System.DefaultWorkingDirectory)/code_to_sign.zip"
                 $privateKeyPath = "$(System.DefaultWorkingDirectory)/private-key.asc"
-                $passphrase = "my-secret-passphrase"  # Or use a secure variable
+                $passphrase = "dwee1234@@"  # Or use a secure variable
                 
                 # ✅ Check if files exist
                 if (-Not (Test-Path $filePath)) {
